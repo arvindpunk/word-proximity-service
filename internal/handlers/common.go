@@ -3,14 +3,13 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/arvindpunk/word-proximity-service/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
-const VERSION = "0.0.1"
-
 const (
 	ResponseCodeSuccess = "SUCCESS"
-	ResponseCodeError   = "SUCCESS"
+	ResponseCodeError   = "ERROR"
 )
 
 type ResponseStructure struct {
@@ -30,7 +29,7 @@ func (rs *ResponseStructure) Respond(c *gin.Context) {
 func WithSuccess(data interface{}) *ResponseStructure {
 	return &ResponseStructure{
 		Code:    ResponseCodeSuccess,
-		Version: VERSION,
+		Version: utils.VERSION,
 
 		Data: data,
 	}
@@ -39,7 +38,7 @@ func WithSuccess(data interface{}) *ResponseStructure {
 func WithError(errCode string, err string) *ResponseStructure {
 	return &ResponseStructure{
 		Code:    ResponseCodeError,
-		Version: VERSION,
+		Version: utils.VERSION,
 
 		Error:     err,
 		ErrorCode: errCode,
