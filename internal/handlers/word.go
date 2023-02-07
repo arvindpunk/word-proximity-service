@@ -108,6 +108,11 @@ func RefreshWordCache() gin.HandlerFunc {
 		}
 
 		// TODO: update cache with thread safety
+		newCache := make(map[int]string)
+		for _, el := range words {
+			newCache[getDateIntFromTime(el.Date)] = el.Word
+		}
+		cache = newCache
 
 		WithSuccess(words).
 			Respond(c)
