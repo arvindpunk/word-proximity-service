@@ -18,8 +18,7 @@ type ResponseStructure struct {
 
 	Data interface{} `json:"data,omitempty"`
 
-	Error     string `json:"error,omitempty"`
-	ErrorCode string `json:"errorCode,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 func (rs *ResponseStructure) Respond(c *gin.Context) {
@@ -35,12 +34,11 @@ func WithSuccess(data interface{}) *ResponseStructure {
 	}
 }
 
-func WithError(errCode string, err string) *ResponseStructure {
+func WithError(err error) *ResponseStructure {
 	return &ResponseStructure{
 		Code:    ResponseCodeError,
 		Version: utils.VERSION,
 
-		Error:     err,
-		ErrorCode: errCode,
+		Error: err.Error(),
 	}
 }

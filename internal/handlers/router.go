@@ -13,9 +13,9 @@ func NewRouter() *gin.Engine {
 		cors.New(config),
 	)
 	v1 := r.Group("/v1")
-	v1.GET("/get-target-word", GetTargetWord())
+	v1.GET("/get-target-word", HandleGetTargetWord())
 
 	internal := r.Group("/internal")
-	internal.POST("/refresh-word-cache", RefreshWordCache())
+	internal.POST("/refresh-word-cache", HandleRefreshWordCache())
 	return r
 }

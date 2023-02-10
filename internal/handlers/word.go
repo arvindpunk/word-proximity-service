@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	dbWordProximity "github.com/arvindpunk/word-proximity-service/internal/db"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,7 +17,7 @@ type ResponseTargetWord struct {
 
 var cache = make(map[int]string)
 
-func GetTargetWord() gin.HandlerFunc {
+func HandleGetTargetWord() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		targetWord, err := getWordForTime(time.Now().UTC())
 		if err != nil {
@@ -23,7 +25,7 @@ func GetTargetWord() gin.HandlerFunc {
 				Err(err).
 				Str("handler", c.FullPath()).
 				Send()
-			WithError("ERR_CACHE_001", err.Error()).
+			WithError(err).
 				Respond(c)
 			return
 		}
@@ -42,7 +44,7 @@ func GetTargetWord() gin.HandlerFunc {
 // => year * 10000 + month * 100 + day = 20230206
 func getDateIntFromTime(time time.Time) int {
 	year, month, day := time.Date()
-	return year*1000 + int(month) + day
+	return year*10000 + int(month)*100 + day
 }
 
 func getWordForTime(time time.Time) (string, error) {
@@ -54,67 +56,81 @@ func getWordForTime(time time.Time) (string, error) {
 	return targetWord, nil
 }
 
-func RefreshWordCache() gin.HandlerFunc {
+func HandleRefreshWordCache() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		l := log.With().
 			Str("handler", c.FullPath()).
 			Logger()
-		db, err := dbWordProximity.Connect()
+
+		words, err := RefreshWordCache(ctx, &l)
 		if err != nil {
-			l.Error().
-				Err(err).
-				Msg("db connection failed")
-			WithError("ERR_DB_001", err.Error()).
+			WithError(err).
 				Respond(c)
 			return
 		}
-		defer db.Close()
-
-		now := time.Now().UTC()
-
-		rows, err := db.QueryContext(ctx,
-			`SELECT 
-				id, word, date, created_at, updated_at
-			FROM words 
-			WHERE date > $1 AND date <= $2`,
-			now.AddDate(0, 0, -15),
-			now.AddDate(0, 0, 15))
-
-		if err != nil {
-			l.Error().
-				Err(err).
-				Msg("failed to get words from db")
-			WithError("ERR_DB_002", err.Error()).
-				Respond(c)
-			return
-		}
-		defer rows.Close()
-
-		words := []dbWordProximity.Word{}
-
-		for rows.Next() {
-			var word dbWordProximity.Word
-			err := rows.Scan(&word.Id, &word.Word, &word.Date, &word.CreatedAt, &word.UpdatedAt)
-			if err != nil {
-				l.Error().
-					Err(err).
-					Msg("failed while scanning row")
-				WithError("ERR_DB_003", err.Error()).
-					Respond(c)
-				return
-			}
-			words = append(words, word)
-		}
-
-		// TODO: update cache with thread safety
-		newCache := make(map[int]string)
-		for _, el := range words {
-			newCache[getDateIntFromTime(el.Date)] = el.Word
-		}
-		cache = newCache
 
 		WithSuccess(words).
 			Respond(c)
 	}
+}
+
+func RefreshWordCache(ctx context.Context, l *zerolog.Logger) ([]dbWordProximity.Word, error) {
+	words := []dbWordProximity.Word{}
+
+	db, err := dbWordProximity.Connect()
+	if err != nil {
+		l.Error().
+			Err(err).
+			Msg("db connection failed")
+		return words, err
+	}
+	defer db.Close()
+
+	now := time.Now().UTC()
+
+	rows, err := db.QueryContext(ctx,
+		`SELECT 
+			id, word, date, created_at, updated_at
+		FROM words 
+		WHERE date > $1 AND date <= $2`,
+		now.AddDate(0, 0, -15),
+		now.AddDate(0, 0, 15))
+
+	if err != nil {
+		l.Error().
+			Err(err).
+			Msg("failed to get words from db")
+		return words, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var word dbWordProximity.Word
+		err := rows.Scan(&word.Id, &word.Word, &word.Date, &word.CreatedAt, &word.UpdatedAt)
+		if err != nil {
+			l.Error().
+				Err(err).
+				Msg("failed while scanning row")
+			return words, err
+		}
+		words = append(words, word)
+	}
+
+	// TODO: update cache with thread safety
+	newCache := make(map[int]string)
+	for _, el := range words {
+		newCache[getDateIntFromTime(el.Date)] = el.Word
+	}
+	cache = newCache
+
+	for _, word := range words {
+		log.Info().
+			Str("word", word.Word).
+			Int("date", getDateIntFromTime(word.Date)).
+			Msg("fetched and updated word cache")
+
+	}
+
+	return words, nil
 }
