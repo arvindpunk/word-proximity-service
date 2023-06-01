@@ -29,6 +29,7 @@ func Test() {
 		log.Fatal().
 			Err(err).
 			Msg("failed to establish connection with database")
+		return
 	}
 	log.Info().
 		Msg("connection to database established succesfully, now disconnecting")

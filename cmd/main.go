@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	dbWordProximity "github.com/arvindpunk/word-proximity-service/internal/db"
 	"github.com/arvindpunk/word-proximity-service/internal/handlers"
@@ -20,7 +21,7 @@ func init() {
 
 func main() {
 	r := handlers.NewRouter()
-	if err := r.Run(":5001"); err != nil {
+	if err := r.Run(fmt.Sprintf(":%d", utils.Env.AppPort)); err != nil {
 		log.Fatal().
 			Err(err).
 			Msg("failed to start server")

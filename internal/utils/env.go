@@ -7,6 +7,7 @@ import (
 
 type Environment struct {
 	DBWordProximity string `required:"true" split_words:"true"`
+	AppPort         int    `required:"true" split_words:"true"`
 }
 
 var Env Environment

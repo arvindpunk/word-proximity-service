@@ -1,6 +1,6 @@
 CREATE DATABASE word_proximity;
 
-\ c word_proximity;
+\c word_proximity;
 
 CREATE TABLE IF NOT EXISTS words (
     id SERIAL PRIMARY KEY,
@@ -13,11 +13,6 @@ CREATE TABLE IF NOT EXISTS words (
 CREATE UNIQUE INDEX idx_uniq_words_word ON words (word);
 
 CREATE UNIQUE INDEX idx_uniq_words_date ON words (date);
-
-INSERT INTO
-    words (word, date)
-VALUES
-    ('APPLE', NOW());
 
 CREATE TABLE IF NOT EXISTS allowed_words (
     id SERIAL PRIMARY KEY,
@@ -32,3 +27,6 @@ ALTER TABLE
     ONLY words
 ADD
     CONSTRAINT words_word_fkey FOREIGN KEY (word) REFERENCES allowed_words(word);
+
+INSERT INTO allowed_words (word) VALUES ('APPLE');
+INSERT INTO words (word, date) VALUES ('APPLE', NOW());
